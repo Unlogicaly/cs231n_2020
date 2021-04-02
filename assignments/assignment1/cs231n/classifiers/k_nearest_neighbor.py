@@ -8,6 +8,7 @@ class KNearestNeighbor(object):
     """ a kNN classifier with L2 distance """
 
     def __init__(self):
+
         pass
 
     def train(self, X, y):
@@ -21,6 +22,7 @@ class KNearestNeighbor(object):
         - y: A numpy array of shape (N,) containing the training labels, where
              y[i] is the label for X[i].
         """
+
         self.X_train = X
         self.y_train = y
 
@@ -101,7 +103,7 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            dists[i, :] = np.sqrt(np.sum((self.X_train - X[i]) ** 2, axis=1))
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -131,7 +133,12 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # Explanation is in the corresponding notebook
+
+        dists = - 2 * np.dot(X, self.X_train.T)  # corresponds to multiplication of P and Q^T
+        dists += np.sum(self.X_train ** 2, axis=1)  # corresponds to adding SQS(P) to each line
+        dists += np.sum(X ** 2, axis=1)[:, np.newaxis]  # corresponds to adding SQS(Q)^T to each column
+        dists = np.sqrt(dists)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -164,8 +171,9 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            closest_y = self.y_train[np.argsort([dists[i]])[:k]]
-
+            closest_pics = np.argsort(dists[i])[:k]  # numbers of k elements with the lowest distance
+            closest_y = self.y_train[closest_pics]  # appropriate labels
+            
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
             # TODO:                                                                 #
@@ -176,7 +184,7 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            y_pred[i] = sorted(closest_y, key=lambda x: closest_y.count(x))[-1]
+            y_pred[i] = max(closest_y, key=lambda x: np.sum(closest_y == x))  # prediction is the most common label among k nearest elements
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
