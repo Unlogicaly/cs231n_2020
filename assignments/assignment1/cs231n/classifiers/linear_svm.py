@@ -27,15 +27,18 @@ def svm_loss_naive(W, X, y, reg):
     num_classes = W.shape[1]
     num_train = X.shape[0]
     loss = 0.0
+
+    margin = np.zeros((num_train, num_classes))
+
     for i in range(num_train):
         scores = X[i].dot(W)
         correct_class_score = scores[y[i]]
         for j in range(num_classes):
             if j == y[i]:
                 continue
-            margin = scores[j] - correct_class_score + 1 # note delta = 1
-            if margin > 0:
-                loss += margin
+            margin[i, j] = scores[j] - correct_class_score + 1 # note delta = 1
+            if margin[i, j] > 0:
+                loss += margin[i, j]
 
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
@@ -54,12 +57,19 @@ def svm_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    for j in range(W.shape[1]):
+        for i in range(X.shape[0]):
+
+            if j == y[i]:
+
+                dW[:, j] -= np.sum(margin[i] > 0) * X[i]
+
+            else:
+                dW[:, j] += (margin[i, j] > 0) * X[i]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
-    return loss, dW
-
+    return loss, dW / num_train + 2 * reg * W
 
 
 def svm_loss_vectorized(W, X, y, reg):
@@ -78,7 +88,15 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = X.shape[0]
+
+    tmp = np.dot(X, W)
+
+    margin = np.maximum(0, tmp - tmp[np.arange(N), y][:, np.newaxis] + 1)
+    margin[np.arange(N), y] = 0
+    loss = margin.sum() / N
+
+    loss += reg * np.sum(W * W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -93,7 +111,17 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mask = margin  # np.zeros_like(margin)
+    mask[margin > 0] = 1
+
+    row_sum = mask.sum(axis=1)
+
+    mask[np.arange(N), y] = -row_sum.T
+
+    dW = np.dot(X.T, mask)
+    dW /= N
+
+    dW += 2 * reg * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
