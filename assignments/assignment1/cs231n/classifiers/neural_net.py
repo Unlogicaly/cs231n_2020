@@ -70,6 +70,8 @@ class TwoLayerNet(object):
         W1, b1 = self.params['W1'], self.params['b1']
         W2, b2 = self.params['W2'], self.params['b2']
         N, D = X.shape
+        C = W2.shape[1]
+        H = W1.shape[1]
 
         # Compute the forward pass
         scores = None
@@ -80,7 +82,13 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        fc1_out = scores = np.dot(X, W1) + b1
+        fc1_out[fc1_out < 0] = 0
+        non_lin1_out = fc1_out
+
+        fc2_out = np.dot(non_lin1_out, W2) + b2
+
+        scores = fc2_out
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -98,7 +106,9 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss = np.sum(np.log(np.sum(np.exp(scores - scores[np.arange(N), y][:, np.newaxis]), axis=1))) / N
+
+        loss += reg * (np.sum(W1 ** 2) + np.sum(W2 ** 2))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -111,7 +121,28 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        denum = np.sum(np.exp(scores), axis=1, keepdims=True)
+
+        softmax_res = np.exp(scores) / denum
+        loss_der = -1 / softmax_res[np.arange(N), y] / N
+
+        mask = np.zeros((N, C))
+        mask[np.arange(N), y] = 1
+
+        softmax_der = softmax_res[np.arange(N), y][:, np.newaxis] * (mask - softmax_res)
+        softmax_der *= loss_der[:,np.newaxis]
+
+        grads['b2'] = np.sum(softmax_der, axis=0)
+        grads['W2'] = np.dot(non_lin1_out.T, softmax_der) + 2 * reg * W2
+
+        non_lin1_der = np.dot(softmax_der, W2.T)
+
+        relu_der = np.zeros((N, H))
+        relu_der[fc1_out > 0] = 1
+        relu_der *= non_lin1_der
+
+        grads['b1'] = np.sum(relu_der, axis=0)
+        grads['W1'] = np.dot(X.T, relu_der) + 2 * reg * W1
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -120,7 +151,7 @@ class TwoLayerNet(object):
     def train(self, X, y, X_val, y_val,
               learning_rate=1e-3, learning_rate_decay=0.95,
               reg=5e-6, num_iters=100,
-              batch_size=200, verbose=False):
+              batch_size=200, batch_size_decay=1.0, verbose=False):
         """
         Train this neural network using stochastic gradient descent.
 
@@ -139,7 +170,7 @@ class TwoLayerNet(object):
         - verbose: boolean; if true print progress during optimization.
         """
         num_train = X.shape[0]
-        iterations_per_epoch = max(num_train / batch_size, 1)
+        iterations_per_epoch = max(num_train // batch_size, 1)
 
         # Use SGD to optimize the parameters in self.model
         loss_history = []
@@ -156,7 +187,10 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            indexes = np.random.choice(np.arange(num_train), batch_size)
+
+            X_batch = X[indexes]
+            y_batch = y[indexes]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -172,7 +206,8 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            for param, grad in grads.items():
+                self.params[param] -= learning_rate * grad
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -188,7 +223,7 @@ class TwoLayerNet(object):
                 val_acc_history.append(val_acc)
 
                 # Decay learning rate
-                learning_rate *= learning_rate_decay
+                learning_rate = max(learning_rate_decay * learning_rate, 1e-9)
 
         return {
           'loss_history': loss_history,
@@ -218,7 +253,8 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        scores = self.loss(X)
+        y_pred = np.argmax(scores, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
